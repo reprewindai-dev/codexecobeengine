@@ -13,7 +13,7 @@ function rawBodySaver(req: express.Request, _res: express.Response, buf: Buffer)
 }
 
 function attachHealthRoutes(app: express.Express) {
-  async function healthHandler(_req: express.Request, res: express.Response) {
+  async function readinessHandler(_req: express.Request, res: express.Response) {
     try {
       // Use resilient database health check
       const dbHealthy = await resilientPrisma.healthCheck()
@@ -44,8 +44,15 @@ function attachHealthRoutes(app: express.Express) {
     }
   }
 
-  app.get('/health', healthHandler)
-  app.get('/ready', healthHandler)
+  app.get('/health', (_req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      service: 'ecobe-engine',
+      timestamp: new Date().toISOString(),
+    })
+  })
+
+  app.get('/ready', readinessHandler)
 }
 
 function attachFallbackHandlers(app: express.Express) {
