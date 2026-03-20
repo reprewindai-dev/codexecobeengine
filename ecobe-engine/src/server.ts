@@ -74,6 +74,11 @@ async function start() {
       console.log(`   Status: http://localhost:${env.PORT}/api/v1/system/status`)
       console.log(`   API: http://localhost:${env.PORT}/api/v1`)
 
+      if (!env.ENGINE_BACKGROUND_WORKERS_ENABLED) {
+        console.log('Background workers disabled')
+        return
+      }
+
       // Start workers after server is listening
       try {
         startForecastWorker()
