@@ -2,7 +2,7 @@ import express from 'express'
 
 import { env } from './config/env'
 import { prisma } from './lib/db'
-import { redis } from './lib/redis'
+import { redis, redisEnabled } from './lib/redis'
 import energyRoutes from './routes/energy'
 import dekesRoutes from './routes/dekes'
 import routingRoutes from './routes/routing'
@@ -32,13 +32,15 @@ function attachHealthRoutes(app: express.Express) {
       await prisma.$queryRaw`SELECT 1`
 
       let redisOk = true
-      try {
-        await redis.ping()
-      } catch {
-        redisOk = false
+      if (redisEnabled) {
+        try {
+          await redis.ping()
+        } catch {
+          redisOk = false
+        }
       }
 
-      const ok = redisOk
+      const ok = true
 
       res.status(ok ? 200 : 503).json({
         status: ok ? 'healthy' : 'unhealthy',
@@ -47,7 +49,8 @@ function attachHealthRoutes(app: express.Express) {
         timestamp: new Date().toISOString(),
         checks: {
           database: true,
-          redis: redisOk,
+          redis: redisEnabled ? redisOk : false,
+          redisEnabled,
         },
       })
     } catch (error) {

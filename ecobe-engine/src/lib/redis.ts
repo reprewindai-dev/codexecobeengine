@@ -1,6 +1,11 @@
 import Redis from 'ioredis'
 import { env } from '../config/env'
 
+function isRedisDisabledValue(url: string): boolean {
+  const normalized = url.trim().replace(/^['"]|['"]$/g, '').toLowerCase()
+  return ['disabled', 'off', 'none', 'false', '0'].includes(normalized)
+}
+
 function normalizeRedisUrl(url: string): string {
   const trimmed = url.trim()
 
@@ -16,16 +21,12 @@ function normalizeRedisUrl(url: string): string {
 }
 
 function createDisabledRedisClient() {
-  const disabledError = new Error('Redis disabled')
-
   return new Proxy(
     {},
     {
       get(_target, prop: string) {
         if (prop === 'ping') {
-          return async () => {
-            throw disabledError
-          }
+          return async () => 'PONG'
         }
 
         if (prop === 'quit' || prop === 'disconnect') {
@@ -42,9 +43,9 @@ function createDisabledRedisClient() {
   ) as Redis
 }
 
-const redisDisabled = ['disabled', 'off', 'none', 'false'].includes(env.REDIS_URL.trim().toLowerCase())
+export const redisEnabled = !isRedisDisabledValue(env.REDIS_URL)
 
-export const redis = redisDisabled
+export const redis = !redisEnabled
   ? createDisabledRedisClient()
   : new Redis(normalizeRedisUrl(env.REDIS_URL), {
       maxRetriesPerRequest: 3,
@@ -53,7 +54,7 @@ export const redis = redisDisabled
       },
     })
 
-if (!redisDisabled) {
+if (redisEnabled) {
   redis.on('error', (err) => {
     console.error('Redis error:', err)
   })

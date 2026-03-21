@@ -12,6 +12,9 @@ import { defineConfig, env } from '@prisma/config'
  */
 export default defineConfig({
   datasource: {
-    url: env('DIRECT_DATABASE_URL') ?? env('DATABASE_URL'),
+    url:
+      process.env.DIRECT_DATABASE_URL ??
+      process.env.DATABASE_URL ??
+      'postgresql://postgres:postgres@localhost:5432/railway?schema=public',
   },
 })

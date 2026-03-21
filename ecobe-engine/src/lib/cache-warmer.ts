@@ -1,6 +1,6 @@
 import { providerRouter } from './carbon/provider-router'
 import { GridSignalCache } from './grid-signals/grid-signal-cache'
-import { redis } from './redis'
+import { redis, redisEnabled } from './redis'
 
 const SUPPORTED_REGIONS = [
   'us-east-1', 'us-west-2', 'eu-west-1',
@@ -66,6 +66,14 @@ export async function getCacheHealthStatus(): Promise<{
   } | null
 }> {
   try {
+    if (!redisEnabled) {
+      return {
+        isHealthy: true,
+        redisConnected: false,
+        cacheStats: null,
+      }
+    }
+
     const redisHealthy = await redis.ping().then(() => true).catch(() => false)
 
     if (!redisHealthy) {

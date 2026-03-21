@@ -1,6 +1,6 @@
 import { env } from './config/env'
 import { prisma } from './lib/db'
-import { redis } from './lib/redis'
+import { redis, redisEnabled } from './lib/redis'
 import { createApp } from './app'
 import { startForecastWorker } from './workers/forecast-poller'
 import { scheduleIntelligenceJobs } from './workers/intelligence-scheduler'
@@ -39,8 +39,10 @@ async function gracefulShutdown(signal: string) {
     console.log('Disconnecting from database...')
     await prisma.$disconnect()
 
-    console.log('Closing Redis connection...')
-    await redis.quit().catch(() => undefined)
+    if (redisEnabled) {
+      console.log('Closing Redis connection...')
+      await redis.quit().catch(() => undefined)
+    }
 
     clearTimeout(shutdownTimer)
     console.log('✅ Graceful shutdown complete.')
@@ -58,13 +60,16 @@ async function start() {
     await prisma.$connect()
     console.log('✅ Database connected')
 
-    // Test Redis connection
-    try {
-      await redis.ping()
-      console.log('✅ Redis connected')
-    } catch (error) {
-      console.error('Redis error:', error)
-      console.warn('⚠️  Redis unavailable at startup; continuing without Redis')
+    if (redisEnabled) {
+      try {
+        await redis.ping()
+        console.log('✅ Redis connected')
+      } catch (error) {
+        console.error('Redis error:', error)
+        console.warn('⚠️  Redis unavailable at startup; continuing without Redis')
+      }
+    } else {
+      console.log('Redis cache disabled')
     }
 
     server = app.listen(env.PORT, () => {

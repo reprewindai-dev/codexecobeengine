@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { redis } from '../lib/redis'
+import { redis, redisEnabled } from '../lib/redis'
 import { prisma } from '../lib/db'
 import { GridSignalCache } from '../lib/grid-signals/grid-signal-cache'
 
@@ -48,24 +48,28 @@ router.get('/status', async (req: Request, res: Response) => {
     }
 
     // Get Redis status
-    let redisHealthy = false
+    let redisHealthy = !redisEnabled
     let redisLatency = 0
-    try {
-      const redisStart = Date.now()
-      await redis.ping()
-      redisHealthy = true
-      redisLatency = Date.now() - redisStart
-    } catch (error) {
-      redisHealthy = false
-      redisLatency = -1
+    if (redisEnabled) {
+      try {
+        const redisStart = Date.now()
+        await redis.ping()
+        redisHealthy = true
+        redisLatency = Date.now() - redisStart
+      } catch (error) {
+        redisHealthy = false
+        redisLatency = -1
+      }
     }
 
     // Get cache statistics
     let cacheStats = null
-    try {
-      cacheStats = await GridSignalCache.getCacheStats()
-    } catch (error) {
-      console.warn('Failed to get cache stats:', error)
+    if (redisEnabled) {
+      try {
+        cacheStats = await GridSignalCache.getCacheStats()
+      } catch (error) {
+        console.warn('Failed to get cache stats:', error)
+      }
     }
 
     // Get memory usage
@@ -91,7 +95,8 @@ router.get('/status', async (req: Request, res: Response) => {
         },
         redis: {
           healthy: redisHealthy,
-          latencyMs: redisLatency >= 0 ? redisLatency : null
+          latencyMs: redisLatency >= 0 ? redisLatency : null,
+          enabled: redisEnabled,
         }
       },
       cache: cacheStats ? {
@@ -143,6 +148,19 @@ router.get('/workers', (req: Request, res: Response) => {
  */
 router.get('/cache', async (req: Request, res: Response) => {
   try {
+    if (!redisEnabled) {
+      return res.json({
+        timestamp: new Date().toISOString(),
+        cache: {
+          enabled: false,
+          totalKeys: 0,
+          keyTypes: {},
+          regions: {},
+          regionCount: 0,
+        },
+      })
+    }
+
     const cacheStats = await GridSignalCache.getCacheStats()
 
     res.json({

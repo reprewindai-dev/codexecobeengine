@@ -66,6 +66,7 @@ const envSchema = z.object({
   // UI (debug)
   UI_ENABLED: z.string().optional(),
   UI_TOKEN: z.string().optional(),
+  ENGINE_BACKGROUND_WORKERS_ENABLED: z.string().optional(),
 
   // External integrations
   ECOBE_ENGINE_URL: z.string().optional(),
@@ -103,6 +104,10 @@ export const env = {
     parsed.data.UI_ENABLED !== undefined
       ? parsed.data.UI_ENABLED === 'true'
       : parsed.data.NODE_ENV !== 'production',
+  ENGINE_BACKGROUND_WORKERS_ENABLED:
+    parsed.data.ENGINE_BACKGROUND_WORKERS_ENABLED !== undefined
+      ? parsed.data.ENGINE_BACKGROUND_WORKERS_ENABLED === 'true'
+      : true,
   FORECAST_REFRESH_ENABLED:
     parsed.data.FORECAST_REFRESH_ENABLED !== undefined
       ? parsed.data.FORECAST_REFRESH_ENABLED === 'true'
